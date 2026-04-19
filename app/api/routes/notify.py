@@ -10,11 +10,15 @@ from app.models.user import User
 from app.models.event import Event
 
 from app.decision_engine.rules import should_send_now, get_scheduled_time
+from app.scheduler.tasks import send_notification_task
+
+from app.utils.response import success_response, error_response
+from app.utils.logger import get_logger
 
 router = APIRouter()
+logger = get_logger("notify_api")
 
 
-# Request Schema
 class NotificationRequest(BaseModel):
     user_id: str
     message: str
@@ -23,75 +27,89 @@ class NotificationRequest(BaseModel):
 
 @router.post("/")
 def create_notification(request: NotificationRequest, db: Session = Depends(get_db)):
-    # Check if user exists
-    user = db.query(User).filter(User.user_id == request.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        logger.info(f"Received notification request for user={request.user_id}")
 
-    # Fetch user events
-    user_events = db.query(Event).filter(Event.user_id == request.user_id).all()
+        # Check if user exists
+        user = db.query(User).filter(User.user_id == request.user_id).first()
+        if not user:
+            logger.error(f"User not found: {request.user_id}")
+            raise HTTPException(status_code=404, detail="User not found")
 
-    # Decision Engine
-    should_send, reason = should_send_now(user_events)
+        # Fetch user events
+        user_events = db.query(Event).filter(Event.user_id == request.user_id).all()
 
-    if should_send:
-        scheduled_time = datetime.now(timezone.utc)
-        status = "ready"
-    else:
-        scheduled_time = get_scheduled_time(user_events)
-        status = "scheduled"
+        # Decision Engine
+        should_send, reason = should_send_now(user_events)
+        logger.info(f"Decision: should_send={should_send}, reason={reason}")
 
-    # Create notification
-    notification = Notification(
-        user_id=request.user_id,
-        message=request.message,
-        type=request.type,
-        status=status,
-        scheduled_time=scheduled_time
-    )
+        if should_send:
+            scheduled_time = datetime.now(timezone.utc)
+            status = "ready"
+        else:
+            scheduled_time = get_scheduled_time(user_events)
+            status = "scheduled"
 
-    db.add(notification)
-    db.commit()
-    db.refresh(notification)
+        # Create notification
+        notification = Notification(
+            user_id=request.user_id,
+            message=request.message,
+            type=request.type,
+            status=status,
+            scheduled_time=scheduled_time
+        )
 
-    # Send to Celery worker if ready
-    if notification.status == "ready":
-        from app.scheduler.tasks import send_notification_task
-        send_notification_task.delay(notification.id)
+        db.add(notification)
+        db.commit()
+        db.refresh(notification)
 
-    return {
-        "status": "success",
-        "decision": {
-            "should_send": should_send,
-            "reason": reason,
-            "scheduled_time": scheduled_time
-        },
-        "data": {
-            "id": notification.id,
-            "user_id": notification.user_id,
-            "message": notification.message,
-            "type": notification.type,
-            "status": notification.status,
-            "scheduled_time": notification.scheduled_time.isoformat() 
-        }
-    }
+        logger.info(f"Notification saved with id={notification.id}, status={notification.status}")
+
+        # Send async task if ready
+        if notification.status == "ready":
+            logger.info(f"Sending notification_id={notification.id} to Celery")
+            send_notification_task.delay(notification.id)
+
+        return success_response(
+            data={
+                "id": notification.id,
+                "user_id": notification.user_id,
+                "message": notification.message,
+                "type": notification.type,
+                "status": notification.status,
+                "scheduled_time": notification.scheduled_time.isoformat()
+            },
+            message=f"Notification processed ({reason})"
+        )
+
+    except HTTPException as e:
+        logger.error(f"HTTP error: {e.detail}")
+        return error_response(message=e.detail, code=e.status_code)
+
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return error_response(message=str(e), code=500)
 
 
 @router.get("/")
 def get_notifications(db: Session = Depends(get_db)):
-    notifications = db.query(Notification).all()
+    try:
+        notifications = db.query(Notification).all()
 
-    return {
-        "total_notifications": len(notifications),
-        "notifications": [
-            {
-                "id": n.id,
-                "user_id": n.user_id,
-                "message": n.message,
-                "type": n.type,
-                "status": n.status,
-                "scheduled_time": n.scheduled_time
-            }
-            for n in notifications
-        ]
-    }
+        return success_response(
+            data=[
+                {
+                    "id": n.id,
+                    "user_id": n.user_id,
+                    "message": n.message,
+                    "type": n.type,
+                    "status": n.status,
+                    "scheduled_time": n.scheduled_time.isoformat()
+                }
+                for n in notifications
+            ]
+        )
+
+    except Exception as e:
+        logger.error(f"Error fetching notifications: {str(e)}")
+        return error_response(message=str(e), code=500)

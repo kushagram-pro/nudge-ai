@@ -1,35 +1,38 @@
 from app.scheduler.celery_app import celery_app
 from app.config.database import SessionLocal
 from app.models.notification import Notification
-from app.models.user import User
-from app.models.event import Event
+
+from app.utils.logger import get_logger
+
+logger = get_logger("notification_worker")
 
 
-@celery_app.task
-def send_notification_task(notification_id: int):
+@celery_app.task(bind=True, autoretry_for=(Exception,), retry_backoff=5, retry_kwargs={"max_retries": 3})
+def send_notification_task(self, notification_id: int):
     db = SessionLocal()
 
     try:
+        logger.info(f"Processing notification_id={notification_id}")
+
         notification = db.query(Notification).filter(
             Notification.id == notification_id
         ).first()
 
         if not notification:
-            print(f"Notification {notification_id} not found")
+            logger.error(f"Notification {notification_id} not found")
             return
 
-        # Simulate sending (replace later with email/push)
-        print(f"Sending notification to user {notification.user_id}")
-        print(f"Message: {notification.message}")
+        logger.info(f"Sending notification to user={notification.user_id}")
+        logger.info(f"Message={notification.message}")
 
-        # Update status
         notification.status = "sent"
         db.commit()
 
-        print(f"Notification {notification_id} marked as sent")
+        logger.info(f"Notification {notification_id} marked as sent")
 
     except Exception as e:
-        print(f"Error sending notification: {e}")
+        logger.error(f"Error sending notification_id={notification_id}: {str(e)}")
+        raise  # required for Celery retry
 
     finally:
         db.close()
