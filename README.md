@@ -177,8 +177,8 @@ GET /analytics/engagement
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/kushagram-pro/nudgeai.git
-cd nudgeai
+git clone https://github.com/kushagram-pro/nudge-ai.git
+cd nudge-ai
 ```
 
 ### 2. Run with Docker
