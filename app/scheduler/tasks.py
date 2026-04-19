@@ -1,6 +1,8 @@
 from app.scheduler.celery_app import celery_app
 from app.config.database import SessionLocal
 from app.models.notification import Notification
+from app.models.user import User
+from app.models.event import Event
 
 
 @celery_app.task
