@@ -67,7 +67,7 @@ def create_notification(request: NotificationRequest, db: Session = Depends(get_
             "message": notification.message,
             "type": notification.type,
             "status": notification.status,
-            "scheduled_time": notification.scheduled_time.isoformat()
+            "scheduled_time": notification.scheduled_time.isoformat() 
         }
     }
 
