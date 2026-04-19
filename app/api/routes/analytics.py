@@ -1,33 +1,63 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 from collections import Counter
 
-from app.api.routes.events import EVENT_STORE
-from app.api.routes.notify import NOTIFICATION_STORE
+from app.config.database import get_db
+from app.models.event import Event
+from app.models.notification import Notification
+from app.models.user import User
 
 router = APIRouter()
 
-@router.get("/engagement")
-def get_engagement_metrics():
-    total_events = len(EVENT_STORE)
-    total_notifications = len(NOTIFICATION_STORE)
 
-    event_types = [event["event"] for event in EVENT_STORE]
-    event_counts = Counter(event_types)
+@router.get("/engagement")
+def get_engagement_metrics(db: Session = Depends(get_db)):
+    events = db.query(Event).all()
+    notifications = db.query(Notification).all()
+
+    total_events = len(events)
+    total_notifications = len(notifications)
+
+    event_types = [event.event for event in events]
+    event_distribution = Counter(event_types)
 
     return {
-        "total_events" : total_events,
-        "total_notifications" : total_notifications,
-        "event_distribution" : event_counts
+        "total_events": total_events,
+        "total_notifications": total_notifications,
+        "event_distribution": event_distribution
     }
 
-@router.get("/users/{user_id}")
-def get_user_analytics(user_id: str):
-    user_events = [e for e in EVENT_STORE if e["user_id"] == user_id]
-    user_notifications = [n for n in NOTIFICATION_STORE if n["user_id"] == user_id]
+
+@router.get("/user/{user_id}")
+def get_user_analytics(user_id: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.user_id == user_id).first()
+
+    if not user:
+        return {"error": "User not found"}
+
+    user_events = db.query(Event).filter(Event.user_id == user_id).all()
+    user_notifications = db.query(Notification).filter(Notification.user_id == user_id).all()
 
     return {
-        "user_id" : user_id,
-        "total_events" : len(user_events),
-        "total_notifications" : len(user_notifications),
-        "events" : user_events
+        "user_id": user_id,
+        "total_events": len(user_events),
+        "total_notifications": len(user_notifications),
+        "events": [
+            {
+                "id": e.id,
+                "event": e.event,
+                "timestamp": e.timestamp
+            }
+            for e in user_events
+        ],
+        "notifications": [
+            {
+                "id": n.id,
+                "message": n.message,
+                "type": n.type,
+                "status": n.status,
+                "scheduled_time": n.scheduled_time
+            }
+            for n in user_notifications
+        ]
     }

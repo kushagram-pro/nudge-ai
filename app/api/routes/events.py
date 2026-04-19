@@ -1,6 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
 from datetime import datetime
 from pydantic import BaseModel
+
+from app.config.database import get_db
+from app.models.event import Event
+from app.models.user import User
 
 router = APIRouter()
 
@@ -9,30 +14,49 @@ class EventRequest(BaseModel):
     event : str
     timestamp : datetime
 
-EVENT_STORE = []
+
 
 @router.post("/")
-def ingest_event(event: EventRequest):
-    try:
-        event_data = {
-            "user_id": event.user_id,
-            "event" : event.event,
-            "timestamp" : event.timestamp
-        }
+def ingest_event(event: EventRequest, db: Session = Depends(get_db)):
+    
+    user = db.query(User).filter(User.user_id == event.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail ="User not found")
+    
+    new_event= Event(
+        user_id = event.user_id,
+        event = event.event,
+        timestamp=event.timestamp
+    )
 
-        EVENT_STORE.append(event_data)
+    db.add(new_event)
+    db.commit()
+    db.refresh(new_event)
 
-        return {
-            "status" : "success",
-            "message" : "EVENT recorded",
-            "data" : event_data
+    return {
+        "status" : "success",
+        "message" : "Event recorded",
+        "data" : {
+            "id" : new_event.id,
+            "user_id" : new_event.user_id,
+            "event" :new_event.event,
+            "timestamp" : new_event.timestamp
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    }
     
 @router.get("/")
-def get_events():
+def get_events(db: Session = Depends(get_db)):
+    events = db.query(Event).all()
+
     return {
-        "total_events" : len(EVENT_STORE),
-        "events" : EVENT_STORE
+        "total_events" : len(events),
+        "events" : [
+            {
+                "id": e.id,
+                "user_id": e.user_id,
+                "event" : e.event,
+                "timestamp" : e.timestamp
+            }
+            for e in events
+        ]
     }
