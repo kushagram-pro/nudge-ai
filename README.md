@@ -254,3 +254,4 @@ This project demonstrates:
 * Scalable architecture
 * SaaS fundamentals
 * Applied AI in a production-oriented system
+"# nudge-ai" 
