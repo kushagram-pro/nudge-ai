@@ -54,6 +54,11 @@ def create_notification(request: NotificationRequest, db: Session = Depends(get_
     db.commit()
     db.refresh(notification)
 
+    # Send to Celery worker if ready
+    if notification.status == "ready":
+        from app.scheduler.tasks import send_notification_task
+        send_notification_task.delay(notification.id)
+
     return {
         "status": "success",
         "decision": {
