@@ -1,320 +1,199 @@
-# NudgeAI — Context-Aware Notification Engine (SaaS)
+# NudgeAI v1.0.0  
+### Notification Decision Intelligence API
 
-## Problem
+NudgeAI is a multi-tenant SaaS backend that helps companies optimize when and whether to send notifications based on user behavior.
 
-Modern applications send notifications without considering user context, behavior, or timing.
-
-This leads to:
-
-* Notification fatigue
-* Low engagement rates
-* Poor user experience
-
-Existing systems rely on:
-
-* Fixed schedules
-* Generic messaging
-* No feedback-based optimization
+Instead of blindly sending notifications, NudgeAI analyzes user activity and returns intelligent decisions that improve engagement and retention.
 
 ---
 
-## Solution
+## 🚀 Overview
 
-NudgeAI is a multi-tenant SaaS backend that intelligently decides:
+Modern applications send notifications without context, leading to low engagement and user fatigue.
 
-If → When → What to notify a user
+NudgeAI solves this by acting as a **decision intelligence layer**:
 
-It uses event-driven architecture and behavioral modeling to optimize notification delivery for higher engagement.
-
----
-
-## Core Features
-
-* Event Ingestion System — Tracks user activity in real time
-* Behavior Modeling — Builds user engagement profiles
-* Smart Scheduling Engine — Optimizes notification timing
-* Analytics API — Measures engagement and performance
-* Feedback Loop — Continuously improves decisions
-* Multi-Tenant Architecture — Supports multiple applications
+- Predicts optimal send time
+- Avoids sending at bad moments
+- Improves user engagement using behavioral signals
 
 ---
 
-## Architecture Overview
+## 🧠 Core Idea
 
-```text
-Client App
-   │
-   ├── POST /events ───────────────► Event Ingestion API
-   │                                  │
-   │                                  ▼
-   │                          User Behavior Model
-   │                                  │
-   ├── POST /notify ───────────────► Decision Engine
-                                      │
-                                      ▼
-                               Scheduler (Queue)
-                                      │
-                                      ▼
-                              Notification Worker
-                                      │
-                                      ▼
-                              Notification Delivery
-                                      │
-                                      ▼
-                               Feedback Loop (events)
-```
+Companies integrate with a single API:
 
----
-
-## Tech Stack
-
-* Backend: FastAPI (Python)
-* Queue: Redis + Celery
-* Database: PostgreSQL
-* Containerization: Docker
-* AI/ML (Phase 2+): Scikit-learn or PyTorch
-
----
-
-## API Design
-
-### 1. Track User Events
-
-```http
-POST /events
-```
-
-```json
-{
-  "user_id": "u123",
-  "event": "app_open",
-  "timestamp": "2026-04-19T10:00:00"
-}
-```
-
----
-
-### 2. Send Notification Request
-
-```http
-POST /notify
-```
-
-```json
-{
-  "user_id": "u123",
-  "message": "Complete your workout today!",
-  "type": "reminder"
-}
-```
-
----
-
-### 3. Get User Profile Insights
-
-```http
-GET /user/{id}/profile
-```
-
----
-
-### 4. Analytics
-
-```http
-GET /analytics/engagement
-```
-
----
-
-## Decision Engine Logic
-
-### Phase 1 (Rule-Based)
-
-* Send only during user active hours
-* Avoid inactive users
-* Limit daily notifications
-
-### Phase 2 (ML-Based)
-
-* Predict probability of engagement
-* Optimize timing based on historical behavior
-
----
-
-## Database Schema
-
-* users
-* tenants
-* events
-* notifications
-* engagement_logs
-
----
-
-## Data Flow
-
-1. Client sends user events to `/events`
-2. System updates behavior model
-3. Client requests notification via `/notify`
-4. Decision engine determines optimal timing
-5. Job is queued and processed asynchronously
-6. Notification is sent
-7. User interaction is tracked and fed back into the system
-
----
-
-## SaaS Capabilities
-
-* Multi-tenant architecture
-* Rate limiting per tenant
-* Usage tracking (notifications per user)
-* Extensible pricing model (Free and Pro tiers)
-
----
-
-## Getting Started
-
-### Frontend Dashboard
-
-The React dashboard lives at the repository root and connects to the FastAPI API at `http://localhost:8000` by default.
-
-```bash
-npm install
-npm run dev
-```
-
-Open:
-
-```text
-http://localhost:5173
-```
-
-Demo company login:
-
-```text
-Email: demo@nudgeai.dev
-Password: password
-API key: nudge_demo_api_key_123
-```
-
-To target another backend URL, create `.env.local`:
-
-```bash
-VITE_API_BASE_URL=http://localhost:8000
-```
-
-### Notification Decision API
-
-Companies can sign up, log in, and use their tenant API key for the decision API.
-
-```http
-POST /companies/signup
-POST /companies/login
 POST /decide
-POST /feedback
-GET /metrics
-GET /mock/user
-```
 
-Authenticated API requests must include:
-
-```text
-Authorization: Bearer <API_KEY>
-```
-
-Example decision request:
-
-```json
+Input:
 {
-  "user_id": "demo_user_001",
-  "event_history": [
-    {
-      "event": "app_open",
-      "timestamp": "2026-04-22T08:40:00Z"
-    }
-  ],
-  "message": "Your personalized workout plan is ready."
+  "user_id": "u123",
+  "event_history": [],
+  "message": "50% off on your next order"
 }
-```
 
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/kushagram-pro/nudge-ai.git
-cd nudge-ai
-```
-
-### 2. Run with Docker
-
-```bash
-docker-compose up --build
-```
-
-### 3. Access API
-
-```
-http://localhost:8000/docs
-```
+Output:
+{
+  "status": "success",
+  "message": "Decision generated",
+  "data": {
+    "should_send": true,
+    "best_time": "2026-04-22T19:00:00Z",
+    "confidence": 0.82,
+    "reason": "User active during this time window"
+  }
+}
 
 ---
 
-## Example Use Case
+## 🏗️ Architecture
 
-A fitness application integrates NudgeAI.
-
-Instead of sending reminders at fixed times, the system:
-
-* Learns when the user is most active
-* Sends notifications at optimal times
-* Improves engagement probability
+- FastAPI (API layer)
+- SQLAlchemy (ORM)
+- SQLite / PostgreSQL (database)
+- Celery + Redis (async processing)
+- Rule-based decision engine (extendable to ML)
 
 ---
 
-## Roadmap
+## 🔑 Key Features
 
-* Event ingestion system
-* Rule-based decision engine
-* Asynchronous notification scheduler
-* ML-based engagement prediction
-* Reinforcement learning optimization
-* Dashboard interface
-* A/B testing engine
+### 1. Multi-Tenant SaaS
+- Each company has its own API key
+- Data is isolated per tenant
+
+### 2. Decision Engine
+- Uses user activity to determine:
+  - whether to send
+  - when to send
+- Avoids spamming active users
+- Handles inactive users intelligently
+
+### 3. Async Processing
+- Celery workers handle background jobs
+- Scalable architecture
+
+### 4. Feedback Loop (Foundation)
+- Tracks user interaction with notifications
+- Enables future learning and optimization
+
+### 5. Analytics
+- Event distribution
+- Notification stats
+- Engagement metrics (extendable)
 
 ---
 
-## Future Improvements
+## 🔐 Authentication
 
-* Real-time decision engine
-* Cross-channel notifications (email, push, SMS)
-* Personalization using embeddings
-* Multi-language support
+All requests require an API key:
 
----
-
-## Resume Description
-
-Built a multi-tenant SaaS backend that optimizes notification delivery using event-driven architecture, behavioral modeling, and intelligent scheduling.
+Authorization: Bearer YOUR_API_KEY
 
 ---
 
-## License
+## 📦 API Endpoints
+
+### POST /decide
+Returns decision for notification delivery
+
+### POST /feedback
+Tracks user interaction
+
+{
+  "user_id": "u123",
+  "notification_id": 10,
+  "action": "clicked"
+}
+
+### GET /metrics
+Returns engagement statistics
+
+{
+  "status": "success",
+  "data": {
+    "total_decisions": 1200,
+    "click_rate": 0.31,
+    "engagement_score": 0.68
+  }
+}
+
+---
+
+## 🧪 Running Locally
+
+### 1. Install dependencies
+pip install -r requirements.txt
+
+### 2. Run API
+uvicorn app.main:app --reload
+
+### 3. Run Redis
+redis-server
+
+### 4. Start Celery worker
+python -m celery -A app.scheduler.celery_app.celery_app worker --loglevel=info --pool=solo
+
+---
+
+## 🧠 Use Cases
+
+- Food delivery apps (optimize order nudges)
+- Streaming platforms (increase watch engagement)
+- E-commerce (recover abandoned carts)
+- EdTech (increase daily activity)
+
+---
+
+## 💡 Why NudgeAI?
+
+Most systems focus on sending notifications.
+
+NudgeAI focuses on **sending them at the right time**.
+
+---
+
+## 🚀 Roadmap
+
+- ML-based prediction models
+- A/B testing engine
+- Multi-channel support (email, push, SMS)
+- Advanced analytics dashboard
+- Tenant-level performance insights
+
+---
+
+## 📌 Version
+
+Current Version: **v1.0.0**
+
+This version includes:
+- Multi-tenant API
+- Rule-based decision engine
+- Async processing
+- Basic analytics
+- Feedback tracking
+
+---
+
+## 📄 License
 
 MIT License
 
 ---
 
-## Contributing
+## 👨‍💻 Author
 
-Pull requests are welcome. For major changes, open an issue first to discuss.
+Built by Kushagra Maheshwari
 
 ---
 
-## Note
+## ⭐ Final Note
 
-This project demonstrates:
+This project is designed as a **production-ready foundation** for a SaaS product focused on user engagement optimization.
 
-* Backend system design
-* Scalable architecture
-* SaaS fundamentals
-* Applied AI in a production-oriented system
-"# nudge-ai" 
+It demonstrates:
+- Backend system design
+- Async architecture
+- Multi-tenant SaaS thinking
+- Behavioral decision systems
