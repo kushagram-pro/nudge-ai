@@ -1,12 +1,10 @@
 from celery import Celery
-
-CELERY_BROKER_URL = "redis://localhost:6379/0"
-CELERY_RESULT_BACKEND = "redis://localhost:6379/0"
+from app.config.settings import settings
 
 celery_app = Celery(
     "nudgeai",
-    broker=CELERY_BROKER_URL,
-    backend=CELERY_RESULT_BACKEND,
+    broker=settings.redis_url,
+    backend=settings.redis_url,
     include=[
         "app.scheduler.tasks"  # IMPORTANT: register tasks properly
     ]
@@ -24,3 +22,5 @@ celery_app.conf.update(
 import app.models.user
 import app.models.event
 import app.models.notification
+import app.models.feedback
+import app.models.tenant

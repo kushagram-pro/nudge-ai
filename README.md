@@ -174,6 +174,69 @@ GET /analytics/engagement
 
 ## Getting Started
 
+### Frontend Dashboard
+
+The React dashboard lives at the repository root and connects to the FastAPI API at `http://localhost:8000` by default.
+
+```bash
+npm install
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:5173
+```
+
+Demo company login:
+
+```text
+Email: demo@nudgeai.dev
+Password: password
+API key: nudge_demo_api_key_123
+```
+
+To target another backend URL, create `.env.local`:
+
+```bash
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+### Notification Decision API
+
+Companies can sign up, log in, and use their tenant API key for the decision API.
+
+```http
+POST /companies/signup
+POST /companies/login
+POST /decide
+POST /feedback
+GET /metrics
+GET /mock/user
+```
+
+Authenticated API requests must include:
+
+```text
+Authorization: Bearer <API_KEY>
+```
+
+Example decision request:
+
+```json
+{
+  "user_id": "demo_user_001",
+  "event_history": [
+    {
+      "event": "app_open",
+      "timestamp": "2026-04-22T08:40:00Z"
+    }
+  ],
+  "message": "Your personalized workout plan is ready."
+}
+```
+
 ### 1. Clone the repository
 
 ```bash
